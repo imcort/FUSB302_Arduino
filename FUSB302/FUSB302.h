@@ -8,6 +8,10 @@
 #define PD_HEADER_TYPE(header) ((header) & 0xF)
 #define PD_HEADER_ID(header)   (((header) >> 9) & 7)
 
+#define PD_HEADER_SPEC(header) (((header) >> 6) & 3)
+#define PD_HEADER_PORTROLE(header) (((header) >> 8) & 1)
+#define PD_HEADER_DATAROLE(header) (((header) >> 5) & 1)
+
 /*Registers*/
 /* Chip Device ID - 302A or 302B */
 #define FUSB302_DEVID_302A 0x08
@@ -61,6 +65,7 @@
 #define TCPC_REG_CONTROL0_HOST_CUR_3A0  (3<<2)
 #define TCPC_REG_CONTROL0_HOST_CUR_1A5  (2<<2)
 #define TCPC_REG_CONTROL0_HOST_CUR_USB  (1<<2)
+#define TCPC_REG_CONTROL0_AUTO_PRE (1<<1)
 #define TCPC_REG_CONTROL0_TX_START  (1<<0)
 
 #define TCPC_REG_CONTROL1   0x07
@@ -218,6 +223,7 @@ class FUSB302
     void cc_pu_current(uint8_t current);
 
     bool is_rx_empty();
+    void auto_pre(bool en);
 
     bool is_vbusok();
     bool is_cc_busy();

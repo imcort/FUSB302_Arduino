@@ -2,8 +2,8 @@
 
 FUSB302::FUSB302()
 {
-  Wire.begin(18, 23);
-  //Wire.setClock(50000);
+  Wire.begin(16, 17);
+  Wire.setClock(400000);
 }
 
 void FUSB302::reset() {
@@ -125,11 +125,11 @@ void FUSB302::autocrc_config(bool en,
 
   uint8_t reg = tcpc_read(TCPC_REG_SWITCHES1);
 
-  if (en)
+  if (en) 
     reg |= TCPC_REG_SWITCHES1_AUTO_GCRC;
   else
     reg &= ~TCPC_REG_SWITCHES1_AUTO_GCRC;
-
+  
   if (pwr_role)
     reg |= TCPC_REG_SWITCHES1_POWERROLE;
   else
@@ -140,10 +140,15 @@ void FUSB302::autocrc_config(bool en,
   else
     reg &= ~TCPC_REG_SWITCHES1_DATAROLE;
 
-  if (spec_rev)
+  if (spec_rev & 1)
     reg |= TCPC_REG_SWITCHES1_SPECREV0;
   else
     reg &= ~TCPC_REG_SWITCHES1_SPECREV0;
+
+  if (spec_rev & 2)
+    reg |= TCPC_REG_SWITCHES1_SPECREV1;
+  else
+    reg &= ~TCPC_REG_SWITCHES1_SPECREV1;
 
   tcpc_write(TCPC_REG_SWITCHES1, reg);
 
@@ -164,9 +169,6 @@ void FUSB302::cc_bmc_en(bool cc1, bool cc2) {
     reg &= ~TCPC_REG_SWITCHES1_TXCC2_EN;
 
   tcpc_write(TCPC_REG_SWITCHES1, reg);
-  Serial.println("BMC:");
-
-  Serial.println(reg, BIN);
 
 }
 
@@ -210,6 +212,19 @@ void FUSB302::tx_fifo_flush() {
   uint8_t reg = tcpc_read(TCPC_REG_CONTROL0);
 
   reg |= TCPC_REG_CONTROL0_TX_FLUSH;
+
+  tcpc_write(TCPC_REG_CONTROL0, reg);
+
+}
+
+void FUSB302::auto_pre(bool en) {
+
+  uint8_t reg = tcpc_read(TCPC_REG_CONTROL0);
+
+  if (en)
+    reg |= TCPC_REG_CONTROL0_AUTO_PRE;
+  else
+    reg &= ~TCPC_REG_CONTROL0_AUTO_PRE;
 
   tcpc_write(TCPC_REG_CONTROL0, reg);
 
@@ -372,12 +387,12 @@ void FUSB302::set_interrupt_mask(uint32_t mask) {
 
 }
 
-void USB302_Read_FIFO(uint8_t *data, uint8_t length)
+void USB302_Read_FIFO(uint8_t *data, uint8_t len)
 {
   Wire.beginTransmission(FUSB302_I2C_SLAVE_ADDR);
-  Wire.write(0x43);
+  Wire.write(TCPC_REG_FIFOS);
   Wire.endTransmission(false);
-  Wire.requestFrom(FUSB302_I2C_SLAVE_ADDR, length, true);
+  Wire.requestFrom(FUSB302_I2C_SLAVE_ADDR, len, true);
   int cnt = 0;
   while (Wire.available())   // slave may send less than requested
   {
@@ -398,14 +413,14 @@ uint8_t FUSB302::get_message(uint16_t &head, uint32_t* payload) {
 
     USB302_Read_FIFO((uint8_t*)payload, len * 4);
 
-  } 
+  }
 
   rx_fifo_flush();
   return token;
 
 }
 
-void send_message(uint16_t &head, uint32_t* payload, uint8_t sop) {
+void FUSB302::send_message(uint16_t &head, uint32_t* payload, uint8_t sop) {
 
   uint8_t send_buf[49];
   uint8_t cnt = 0;
@@ -445,5 +460,7 @@ void send_message(uint16_t &head, uint32_t* payload, uint8_t sop) {
   send_buf[cnt++] = FUSB302_TKN_TXON;
 
   Wire.writeTransmission(FUSB302_I2C_SLAVE_ADDR, send_buf, cnt, true);
+
+  tcpc_write(TCPC_REG_CONTROL0, TCPC_REG_CONTROL0_TX_START);
 
 }
