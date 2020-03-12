@@ -3,7 +3,7 @@
 FUSB302::FUSB302()
 {
   Wire.begin(16, 17);
-  Wire.setClock(400000);
+  Wire.setClock(1000000);
 }
 
 void FUSB302::reset() {
@@ -18,8 +18,6 @@ void FUSB302::tcpc_write(uint8_t reg, uint8_t val) {
   Wire.write(reg & 0xFF);
   Wire.write(val & 0xFF);
   Wire.endTransmission();
-  delay(1);
-
 }
 
 uint8_t FUSB302::tcpc_read(uint8_t reg) {
@@ -32,7 +30,6 @@ uint8_t FUSB302::tcpc_read(uint8_t reg) {
   {
     return Wire.read();    // receive a byte as character
   }
-  delay(1);
 }
 
 //Device ID
@@ -95,7 +92,7 @@ void FUSB302::cc_meas_switch(bool cc1, bool cc2) {
 
   tcpc_write(TCPC_REG_SWITCHES0, reg);
 
-  delayMicroseconds(250);
+  delayMicroseconds(10);
 
 }
 
@@ -180,7 +177,7 @@ void FUSB302::vbus_meas_en(bool en) {
   else
     tcpc_write(TCPC_REG_MEASURE, 0);
 
-  delayMicroseconds(250);
+  delayMicroseconds(10);
 
 }
 
@@ -190,7 +187,7 @@ void FUSB302::mdac_set(uint8_t val) {
 
   tcpc_write(TCPC_REG_MEASURE, (reg & 0xC0) | (val & 0x3F));
 
-  delayMicroseconds(250);
+  delayMicroseconds(10);
 
 }
 

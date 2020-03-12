@@ -150,7 +150,7 @@ void interrupt_handler() {
   }
   if (reason & FUSB302_INT_CRC_CHK) {
     Serial.println("FUSB302_INT_CRC_CHK");
-    //msg_recv();
+    //
   }
   if (reason & FUSB302_INT_COMP_CHNG) {
     Serial.println("FUSB302_INT_COMP_CHNG");
@@ -189,7 +189,7 @@ void interrupt_handler() {
   if (reason & FUSB302_INT_GCRCSENT) {
     Serial.println("FUSB302_INT_GCRCSENT");
 
-
+    msg_recv();
   }
 }
 
