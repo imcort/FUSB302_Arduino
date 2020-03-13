@@ -69,8 +69,6 @@ ufp_cc_status ufp_auto_polarity() {
         usbc.cc_bmc_en(true, false);
         usbc.cc_meas_switch(true, false);
 
-        Serial.println(usbc.tcpc_read(TCPC_REG_SWITCHES1), BIN);
-
         Serial.println("CC1 BMC EN");
         usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
         return cc1_status;
@@ -78,8 +76,6 @@ ufp_cc_status ufp_auto_polarity() {
       } else if (cc2_status > cc1_status) {
         usbc.cc_bmc_en(false, true);
         usbc.cc_meas_switch(false, true);
-
-        Serial.println(usbc.tcpc_read(TCPC_REG_SWITCHES1), BIN);
 
         Serial.println("CC2 BMC EN");
         usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
@@ -101,28 +97,27 @@ ufp_cc_status ufp_auto_polarity() {
 
 void msg_recv() {
 
-  //if (!usbc.is_rx_empty()) {
+  if (!usbc.is_rx_empty()) {
 
-  Serial.print("RX");
-  uint16_t  usb_pd_message_header;
-  uint32_t  usb_pd_message_buffer[10];
-  uint8_t token = usbc.get_message(usb_pd_message_header, usb_pd_message_buffer);
+    Serial.print("RX");
+    uint16_t  usb_pd_message_header;
+    uint32_t  usb_pd_message_buffer[10];
+    uint8_t token = usbc.get_message(usb_pd_message_header, usb_pd_message_buffer);
 
-  if (token) {
-    Serial.print("Token = ");
-    Serial.print(TOKEN_PARSE(token));
-    Serial.print(", Header = ");
-    Serial.println(HEADER_PARSE(usb_pd_message_header));
+    if (token) {
+      Serial.print("Token: ");
+      Serial.print(TOKEN_PARSE(token));
+      Serial.print(", Header: ");
+      Serial.println(HEADER_PARSE(usb_pd_message_header));
 
-    for (int i = 0; i < PD_HEADER_CNT(usb_pd_message_header); i++) {
-      Serial.print(i, HEX);
-      Serial.print(" = 0x");
-      Serial.println(usb_pd_message_buffer[i], BIN);
+      for (int i = 0; i < PD_HEADER_CNT(usb_pd_message_header); i++) {
+        Serial.print(i, HEX);
+        Serial.print(" = 0x");
+        Serial.println(usb_pd_message_buffer[i], BIN);
+      }
+
     }
-
   }
-  //usbc.rx_fifo_flush();
-  //}
 
 }
 
@@ -135,7 +130,6 @@ void gcrcsend() {
 void interrupt_handler() {
   uint32_t reason = usbc.get_interrupt_reason();
   Serial.println();
-  Serial.println(reason, BIN);
   if (reason & FUSB302_INT_BC_LVL) {
     //Serial.println("FUSB302_INT_BC_LVL");
   }
@@ -228,6 +222,8 @@ void setup() {
   usbc.tcpc_write(TCPC_REG_POWER, TCPC_REG_POWER_PWR_ALL);
 
   usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
+
+  ufp_auto_polarity();
 
 }
 

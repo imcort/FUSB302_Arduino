@@ -28,15 +28,76 @@ String HEADER_PARSE(uint16_t header) {
   ret += (String)" DataRole:" + (int)PD_HEADER_DATAROLE(header);
 
   uint8_t num = PD_HEADER_CNT(header);
-  if (num)
-    ret += (String)" DataMsg Len=" + num;
-  else
-    ret += " CtrlMsg";
+  if (num) {
 
-  ret += (String)" Type:" + PD_HEADER_ID(header)+ ",";
-    
+    ret += (String)" DataMsg Len=" + num + " ";
+    switch (PD_HEADER_TYPE(header)) {
+      case 1:
+        ret += (String)"Source_Capabilities";
+        break;
+      case 2:
+        ret += (String)"Request";
+        break;
+      case 3:
+        ret += (String)"BIST";
+        break;
+      case 4:
+        ret += (String)"Sink_Capabilities";
+        break;
+      case 5:
+        ret += (String)"Battery_Status";
+        break;
+      case 6:
+        ret += (String)"Alert";
+        break;
+      case 7:
+        ret += (String)"Get_Contry_Info";
+        break;
+      case 15:
+        ret += (String)"Get_Contry_Info";
+        break;
+      default:
+        ret += (String)"Reserved" + (int)PD_HEADER_TYPE(header);
+        break;
+    }
+  }
+
+  else {
+    ret += " CtrlMsg ";
+    switch (PD_HEADER_TYPE(header)) {
+      case 1:
+        ret += (String)"GoodCRC";
+        break;
+      case 2:
+        ret += (String)"GotoMin";
+        break;
+      case 3:
+        ret += (String)"Accept";
+        break;
+      case 4:
+        ret += (String)"Reject";
+        break;
+      case 5:
+        ret += (String)"Ping";
+        break;
+      case 6:
+        ret += (String)"PS_RDY";
+        break;
+      case 7:
+        ret += (String)"Get_Source_Cap";
+        break;
+      case 8:
+        ret += (String)"Get_Sink_Cap";
+        break;
+      default:
+        ret += (String)"Reserved" + (int)PD_HEADER_TYPE(header);
+        break;
+    }
+  }
+
+
   num = PD_HEADER_ID(header);
-  ret += (String)"MsgID=" + num + ",";
+  ret += (String)" MsgID=" + num;
 
   return ret;
 
