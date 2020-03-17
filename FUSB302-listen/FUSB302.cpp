@@ -3,7 +3,7 @@
 FUSB302::FUSB302()
 {
   Wire.begin(16, 17);
-  Wire.setClock(1000000);
+  Wire.setClock(100000);
 }
 
 void FUSB302::reset() {
@@ -122,11 +122,11 @@ void FUSB302::autocrc_config(bool en,
 
   uint8_t reg = tcpc_read(TCPC_REG_SWITCHES1);
 
-  if (en)
+  if (en) 
     reg |= TCPC_REG_SWITCHES1_AUTO_GCRC;
   else
     reg &= ~TCPC_REG_SWITCHES1_AUTO_GCRC;
-
+  
   if (pwr_role)
     reg |= TCPC_REG_SWITCHES1_POWERROLE;
   else
@@ -417,11 +417,12 @@ uint8_t FUSB302::get_message(uint16_t &head, uint32_t* payload) {
 
 }
 
-void FUSB302::send_message(uint16_t head, uint32_t* payload, uint8_t sop) {
+void FUSB302::send_message(uint16_t &head, uint32_t* payload, uint8_t sop) {
 
   uint8_t send_buf[49];
   uint8_t cnt = 0;
   send_buf[cnt++] = TCPC_REG_FIFOS;
+
   switch (sop) {
     case 0: //SOP
       send_buf[cnt++] = FUSB302_TKN_SYNC1;
@@ -447,9 +448,6 @@ void FUSB302::send_message(uint16_t head, uint32_t* payload, uint8_t sop) {
   uint8_t total_len = PD_HEADER_CNT(head) * 4 + 2;
   send_buf[cnt++] = FUSB302_TKN_PACKSYM | total_len;
 
-  send_buf[cnt++] = head & 0xff;
-  send_buf[cnt++] = (head >> 8) & 0xff;
-
   memcpy(&send_buf[cnt], payload, total_len - 2);
 
   cnt += total_len - 2;
@@ -457,16 +455,9 @@ void FUSB302::send_message(uint16_t head, uint32_t* payload, uint8_t sop) {
   send_buf[cnt++] = FUSB302_TKN_JAMCRC;
   send_buf[cnt++] = FUSB302_TKN_EOP;
   send_buf[cnt++] = FUSB302_TKN_TXON;
-  tcpc_write(TCPC_REG_CONTROL0, 0x40);
-  Wire.beginTransmission(FUSB302_I2C_SLAVE_ADDR);
 
+  Wire.writeTransmission(FUSB302_I2C_SLAVE_ADDR, send_buf, cnt, true);
 
-  for (int i = 0; i < (total_len + 9); i++) {
-    Wire.write(send_buf[i]);
-    Serial.println(send_buf[i], HEX);
-  }
-
-  Wire.endTransmission();
-  tcpc_write(TCPC_REG_CONTROL0, 0x05);
+  tcpc_write(TCPC_REG_CONTROL0, TCPC_REG_CONTROL0_TX_START);
 
 }

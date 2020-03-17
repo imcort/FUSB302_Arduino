@@ -1,6 +1,12 @@
 #include "FUSB302.h"
 #include "parse.h"
 
+#include <INA226_asukiaaa.h>
+
+const uint16_t ina226calib = INA226_asukiaaa::calcCalibByResisterMilliOhm(2); // Max 5120 milli ohm
+// const uint16_t ina226calib = INA226_asukiaaa::calcCalibByResisterMicroOhm(2000);
+INA226_asukiaaa voltCurrMeter(INA226_ASUKIAAA_ADDR_A0_GND_A1_GND, ina226calib);
+
 FUSB302 usbc;
 bool is_cc_configured = false;
 
@@ -108,13 +114,13 @@ void msg_recv() {
       Serial.print("Token: ");
       Serial.print(TOKEN_PARSE(token));
       Serial.print(", Header: ");
-      Serial.println(HEADER_PARSE(usb_pd_message_header, usb_pd_message_buffer));
+      Serial.println(HEADER_PARSE(usb_pd_message_header));
 
-      //      for (int i = 0; i < PD_HEADER_CNT(usb_pd_message_header); i++) {
-      //        Serial.print(i, HEX);
-      //        Serial.print(" = 0x");
-      //        Serial.println(usb_pd_message_buffer[i], BIN);
-      //      }
+      for (int i = 0; i < PD_HEADER_CNT(usb_pd_message_header); i++) {
+        Serial.print(i, HEX);
+        Serial.print(" = 0x");
+        Serial.println(usb_pd_message_buffer[i], BIN);
+      }
 
     }
   }
@@ -145,6 +151,7 @@ void interrupt_handler() {
   if (reason & FUSB302_INT_CRC_CHK) {
     Serial.println("FUSB302_INT_CRC_CHK");
     //
+    msg_recv();
   }
   if (reason & FUSB302_INT_COMP_CHNG) {
     Serial.println("FUSB302_INT_COMP_CHNG");
@@ -154,7 +161,7 @@ void interrupt_handler() {
   }
   if (reason & FUSB302_INT_VBUSOK) {
     Serial.println("FUSB302_INT_VBUSOK");
-    ufp_auto_polarity();
+    //ufp_auto_polarity();
   }
   if (reason & FUSB302_INT_HARDRESET) {
     Serial.println("FUSB302_INT_HARDRESET");
@@ -183,7 +190,7 @@ void interrupt_handler() {
   if (reason & FUSB302_INT_GCRCSENT) {
     Serial.println("FUSB302_INT_GCRCSENT");
 
-    msg_recv();
+
   }
 }
 
@@ -194,36 +201,42 @@ void setup() {
   Serial.begin(500000);
 
   usbc.reset();
-  Serial.println();
+
   Serial.println(usbc.get_chip_id(), HEX);
   pinMode(5, INPUT_PULLUP);
   pinMode(22, OUTPUT);
 
-  //Configure UFP:
+  if (voltCurrMeter.begin() != 0) {
+    Serial.println("Failed to begin INA226");
+  }
+  usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
+  //Configure LISTEN:
   usbc.cc_pu_switch(false, false);
   //usbc.cc_pu_current(3);
-  usbc.cc_pd_switch(true, true);
+  usbc.cc_pd_switch(false, false);
 
   usbc.cc_vconn_switch(false, false);
-  usbc.cc_meas_switch(false, false);
+  usbc.cc_meas_switch(false, true);
   usbc.vbus_meas_en(false);
 
-  usbc.autocrc_config(true);
-  usbc.cc_bmc_en(false, false);
+  usbc.autocrc_config(false);
+  usbc.cc_bmc_en(false, true);
+
+
   usbc.sop_prime_en(true);
 
-  usbc.mdac_set(0x34); //2.05V
+  //  usbc.mdac_set(0x34); //2.05V
 
   usbc.get_interrupt_reason();//Clear INT
-  //usbc.set_interrupt_mask(FUSB302_INT_CRC_CHK | FUSB302_INT_VBUSOK);
+  usbc.set_interrupt_mask(FUSB302_INT_CRC_CHK | FUSB302_INT_VBUSOK);
   usbc.int_en(true);
   usbc.get_interrupt_reason();//Clear INT
-
+  //
   usbc.tcpc_write(TCPC_REG_POWER, TCPC_REG_POWER_PWR_ALL);
 
-  usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
+  //usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
 
-  ufp_auto_polarity();
+  //ufp_auto_polarity();
 
 }
 
@@ -233,7 +246,25 @@ void loop() {
   // put your main code here, to run repeatedly:
 
 
+  
 
+
+  //  int16_t ma, mv, mw;
+  //  if (voltCurrMeter.readMV(&mv) == 0) {
+  //    Serial.print(String(mv) + "mV");
+  //  } else {
+  //    Serial.println("Cannot read voltage.");
+  //  }
+  //  if (voltCurrMeter.readMA(&ma) == 0) {
+  //    Serial.print(String(ma) + "mA");
+  //  } else {
+  //    Serial.println("Cannot read current.");
+  //  }
+  //  if (voltCurrMeter.readMW(&mw) == 0) {
+  //    Serial.println(String(mw) + "mW");
+  //  } else {
+  //    Serial.println("Cannot read watt.");
+  //  }
 
 
   if (!digitalRead(5)) {
@@ -242,11 +273,6 @@ void loop() {
     LEDSTATUS = !LEDSTATUS;
   }
 
-  if (Serial.available()) {
-    uint32_t msg = 0x03000000 | (1 << 28) | (0x12C << 10) | 0x12C;
-    usbc.send_message(0x1442, &msg);
-    Serial.flush();
-  }
 
 
 

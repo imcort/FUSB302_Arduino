@@ -12,43 +12,11 @@ String TOKEN_PARSE(uint8_t token) {
     case 3:
       return (String)"SOP2DB";
     default:
-      return (String)"ERROR" + token;
+      return (String)"ERROR";
   }
 }
 
-String Source_Capabilities_PARSE(uint32_t source) {
-
-  String ret = "";
-  uint8_t num = (source >> 30) & 0x3;
-  float cachevolmax, cachevolmin, cachecur;
-  switch (num) {
-    case 0:
-      cachevolmax = ((source >> 10) & 0x3FF) * 0.05f;
-      cachecur = (source & 0x3FF) * 0.01f;
-      ret += (String)"Fixed, Voltage:" + cachevolmax + ", Current:" + cachecur;
-      break;
-    case 1:
-      ret += (String)"Battery,";
-      break;
-    case 2:
-      cachevolmax = ((source >> 20) & 0x3FF) * 0.05f;
-      cachevolmin = ((source >> 10) & 0x3FF) * 0.05f;
-      cachecur = (source & 0x3FF) * 0.01f;
-      ret += (String)"Variable, Voltage:" + cachevolmax + " - " + cachevolmin + ", Current:" + cachecur;
-      break;
-    case 3:
-      cachevolmax = ((source >> 17) & 0x7F) * 0.1f;
-      cachevolmin = ((source >> 8) & 0x7F) * 0.1f;
-      cachecur = (source & 0x7F) * 0.05f;
-      ret += (String)"APDO, Voltage:" + cachevolmax + " - " + cachevolmin + ", Current:" + cachecur;
-      break;
-  }
-  return ret;
-
-
-}
-
-String HEADER_PARSE(uint16_t header, uint32_t* buffer) {
+String HEADER_PARSE(uint16_t header) {
 
   String ret = "";
 
@@ -66,10 +34,6 @@ String HEADER_PARSE(uint16_t header, uint32_t* buffer) {
     switch (PD_HEADER_TYPE(header)) {
       case 1:
         ret += (String)"Source_Capabilities";
-        for (int i = 0; i < num; i++) {
-          ret += Source_Capabilities_PARSE(buffer[i]);
-          ret += "\r\n";
-        }
         break;
       case 2:
         ret += (String)"Request";

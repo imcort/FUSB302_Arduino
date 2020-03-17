@@ -233,7 +233,7 @@ class FUSB302
     bool is_device_present();
     uint8_t get_bc_lvl();
     uint8_t get_message(uint16_t &head, uint32_t* payload);
-    void send_message(uint16_t head, uint32_t* payload, uint8_t sop = 0);
+    void send_message(uint16_t &head, uint32_t* payload, uint8_t sop = 0);
     uint32_t get_interrupt_reason();
     void set_interrupt_mask(uint32_t mask);
     void int_en(bool en);
