@@ -1,3 +1,15 @@
+typedef pd_msg_header {
+
+  bool Extended;
+  uint8_t DataNum;
+  uint8_t MsgID;
+  bool PowerRole;
+  uint8_t Spec;
+  bool DataRole;
+  uint8_t MsgType;
+
+};
+
 String TOKEN_PARSE(uint8_t token) {
 
   switch ((token >> 5) & 0x7) {
