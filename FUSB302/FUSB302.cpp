@@ -384,6 +384,89 @@ void FUSB302::set_interrupt_mask(uint32_t mask) {
 
 }
 
+ufp_cc_status FUSB302::get_ufp_cc_status(uint8_t cc_line) { //cc_line = 1 or 2
+
+  uint8_t cc_lvl;
+  bool comp;
+
+  if (cc_line == 1)
+    cc_meas_switch(true, false);
+  else if (cc_line == 2)
+    cc_meas_switch(false, true);
+  else
+    return UFP_CC_STATUS_ERROR;
+
+  cc_lvl = get_bc_lvl();
+
+  Serial.print("CC Line ");
+  Serial.print(cc_line);
+
+  switch (cc_lvl) {
+    case 0:
+      Serial.println(" Status: UFP_CC_STATUS_NOT_CONN");
+      return UFP_CC_STATUS_NOT_CONN;
+    case 1:
+      Serial.println(" Status: UFP_CC_STATUS_vRd_USB");
+      return UFP_CC_STATUS_vRd_USB;
+    case 2:
+      Serial.println(" Status: UFP_CC_STATUS_vRd_1_5");
+      return UFP_CC_STATUS_vRd_1_5;
+    case 3:
+      comp = get_cc_comp();
+      if (!comp) {
+        Serial.println(" Status: UFP_CC_STATUS_vRd_3_0");
+        return UFP_CC_STATUS_vRd_3_0;
+      }
+
+    default:
+      return UFP_CC_STATUS_ERROR;
+
+  }
+
+}
+
+ufp_cc_status FUSB302::ufp_auto_polarity() {
+
+  if (is_vbusok()) {
+    Serial.println("UFP Attached.");
+
+    if (!is_cc_configured) {
+      ufp_cc_status cc1_status = get_ufp_cc_status(1);
+      ufp_cc_status cc2_status = get_ufp_cc_status(2);
+
+      if (cc1_status == UFP_CC_STATUS_ERROR || cc1_status == UFP_CC_STATUS_ERROR)
+        return UFP_CC_STATUS_ERROR;
+
+      if (cc1_status > cc2_status) {
+        cc_bmc_en(true, false);
+        cc_meas_switch(true, false);
+
+        Serial.println("CC1 BMC EN");
+        tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
+        return cc1_status;
+
+      } else if (cc2_status > cc1_status) {
+        cc_bmc_en(false, true);
+        cc_meas_switch(false, true);
+
+        Serial.println("CC2 BMC EN");
+        tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
+        return cc2_status;
+
+      }
+      is_cc_configured = true;
+    }
+
+
+  } else {
+    Serial.println("Not Attached. ");
+    cc_bmc_en(false, false);
+    is_cc_configured = false;
+    return UFP_CC_STATUS_NOT_CONN;
+
+  }
+}
+
 void USB302_Read_FIFO(uint8_t *data, uint8_t len)
 {
   Wire.beginTransmission(FUSB302_I2C_SLAVE_ADDR);

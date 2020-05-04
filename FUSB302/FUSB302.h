@@ -194,6 +194,14 @@ enum fusb302_interrupt_reason {
     FUSB302_INT_GCRCSENT    = (1<<16),
 };
 
+enum ufp_cc_status {
+  UFP_CC_STATUS_NOT_CONN = 0,
+  UFP_CC_STATUS_vRd_USB = 1,
+  UFP_CC_STATUS_vRd_1_5 = 2,
+  UFP_CC_STATUS_vRd_3_0 = 3,
+  UFP_CC_STATUS_ERROR = 4,
+};
+
 class FUSB302
 {
   public:
@@ -237,6 +245,11 @@ class FUSB302
     uint32_t get_interrupt_reason();
     void set_interrupt_mask(uint32_t mask);
     void int_en(bool en);
+
+
+    ufp_cc_status get_ufp_cc_status(uint8_t cc_line);
+    ufp_cc_status ufp_auto_polarity();
+    bool is_cc_configured = false;
 };
 
 #endif

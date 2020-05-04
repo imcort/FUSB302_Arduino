@@ -2,98 +2,6 @@
 #include "parse.h"
 
 FUSB302 usbc;
-bool is_cc_configured = false;
-
-enum ufp_cc_status {
-  UFP_CC_STATUS_NOT_CONN = 0,
-  UFP_CC_STATUS_vRd_USB = 1,
-  UFP_CC_STATUS_vRd_1_5 = 2,
-  UFP_CC_STATUS_vRd_3_0 = 3,
-  UFP_CC_STATUS_ERROR = 4,
-};
-
-ufp_cc_status get_ufp_cc_status(uint8_t cc_line) { //cc_line = 1 or 2
-
-  uint8_t cc_lvl;
-  bool comp;
-
-  if (cc_line == 1)
-    usbc.cc_meas_switch(true, false);
-  else if (cc_line == 2)
-    usbc.cc_meas_switch(false, true);
-  else
-    return UFP_CC_STATUS_ERROR;
-
-  cc_lvl = usbc.get_bc_lvl();
-
-  Serial.print("CC Line ");
-  Serial.print(cc_line);
-
-  switch (cc_lvl) {
-    case 0:
-      Serial.println(" Status: UFP_CC_STATUS_NOT_CONN");
-      return UFP_CC_STATUS_NOT_CONN;
-    case 1:
-      Serial.println(" Status: UFP_CC_STATUS_vRd_USB");
-      return UFP_CC_STATUS_vRd_USB;
-    case 2:
-      Serial.println(" Status: UFP_CC_STATUS_vRd_1_5");
-      return UFP_CC_STATUS_vRd_1_5;
-    case 3:
-      comp = usbc.get_cc_comp();
-      if (!comp) {
-        Serial.println(" Status: UFP_CC_STATUS_vRd_3_0");
-        return UFP_CC_STATUS_vRd_3_0;
-      }
-
-    default:
-      return UFP_CC_STATUS_ERROR;
-
-  }
-
-}
-
-ufp_cc_status ufp_auto_polarity() {
-
-  if (usbc.is_vbusok()) {
-    Serial.println("UFP Attached.");
-
-    if (!is_cc_configured) {
-      ufp_cc_status cc1_status = get_ufp_cc_status(1);
-      ufp_cc_status cc2_status = get_ufp_cc_status(2);
-
-      if (cc1_status == UFP_CC_STATUS_ERROR || cc1_status == UFP_CC_STATUS_ERROR)
-        return UFP_CC_STATUS_ERROR;
-
-      if (cc1_status > cc2_status) {
-        usbc.cc_bmc_en(true, false);
-        usbc.cc_meas_switch(true, false);
-
-        Serial.println("CC1 BMC EN");
-        usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
-        return cc1_status;
-
-      } else if (cc2_status > cc1_status) {
-        usbc.cc_bmc_en(false, true);
-        usbc.cc_meas_switch(false, true);
-
-        Serial.println("CC2 BMC EN");
-        usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
-        return cc2_status;
-
-      }
-      is_cc_configured = true;
-    }
-
-
-  } else {
-    Serial.println("Not Attached. ");
-    usbc.cc_bmc_en(false, false);
-    is_cc_configured = false;
-    return UFP_CC_STATUS_NOT_CONN;
-
-  }
-}
 
 void msg_recv() {
 
@@ -110,22 +18,10 @@ void msg_recv() {
       Serial.print(", Header: ");
       Serial.println(HEADER_PARSE(usb_pd_message_header, usb_pd_message_buffer));
 
-      //      for (int i = 0; i < PD_HEADER_CNT(usb_pd_message_header); i++) {
-      //        Serial.print(i, HEX);
-      //        Serial.print(" = 0x");
-      //        Serial.println(usb_pd_message_buffer[i], BIN);
-      //      }
-
     }
   }
 
 }
-
-void gcrcsend() {
-  uint16_t msg = 0x21;
-  usbc.send_message(msg, NULL);
-}
-
 
 void interrupt_handler() {
   uint32_t reason = usbc.get_interrupt_reason();
@@ -154,7 +50,7 @@ void interrupt_handler() {
   }
   if (reason & FUSB302_INT_VBUSOK) {
     Serial.println("FUSB302_INT_VBUSOK");
-    ufp_auto_polarity();
+    usbc.ufp_auto_polarity();
   }
   if (reason & FUSB302_INT_HARDRESET) {
     Serial.println("FUSB302_INT_HARDRESET");
@@ -223,7 +119,7 @@ void setup() {
 
   usbc.tcpc_write(TCPC_REG_RESET, TCPC_REG_RESET_PD_RESET);
 
-  ufp_auto_polarity();
+  usbc.ufp_auto_polarity();
 
 }
 

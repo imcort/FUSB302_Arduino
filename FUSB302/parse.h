@@ -1,4 +1,4 @@
-typedef pd_msg_header {
+struct {
 
   bool Extended;
   uint8_t DataNum;
@@ -8,7 +8,7 @@ typedef pd_msg_header {
   bool DataRole;
   uint8_t MsgType;
 
-};
+} pd_msg_header;
 
 String TOKEN_PARSE(uint8_t token) {
 
